@@ -1,4 +1,5 @@
 import numpy as np
+from numpy.lib import stride_tricks
 
 class STFT:
     def __init__(self, fft_size=1024, hop_size=512, window_type="hann") -> None:
@@ -14,23 +15,10 @@ class STFT:
         else:
             window = np.ones(self.fft_size)
 
-        num_frames = 1 + (len(x) - self.fft_size) // self.hop_size # hop_sizes
-        if num_frames < 1:
-            num_frames = 1
+        frame = stride_tricks.sliding_window_view(x, self.fft_size)[::self.hop_size]
 
-        stft_matrix = np.empty((num_frames, self.fft_size), dtype=np.complex64)
+        frame_windowed = frame * window
 
-        for m in range(num_frames):
-            start = m * self.hop_size
-            frame = x[start:start+self.fft_size]
+        spectrum = np.fft.rfft(frame_windowed, n=self.fft_size, axis=1)
 
-            if len(frame) < self.fft_size:
-                frame = np.pad(frame, (0, self.fft_size - len(frame)), mode='constant')
-
-            frame_windowed = frame * window
-
-            spectrum = np.fft.fft(frame_windowed, n=self.fft_size)
-
-            stft_matrix[m, :] = spectrum
-
-        return stft_matrix 
+        return spectrum 

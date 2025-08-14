@@ -21,7 +21,7 @@ magnitude_db = 20 * np.log10(magnitude + 1e-10)
 
 plt.figure(figsize=(10, 6))
 plt.imshow(
-    magnitude_db.T[:1024//2],  # show only positive freqs
+    magnitude_db.T[:1024//4],  # show only positive freqs
     origin="lower",
     aspect="auto",
     cmap="magma"

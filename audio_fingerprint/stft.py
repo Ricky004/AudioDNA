@@ -14,7 +14,7 @@ class STFT:
         else:
             window = np.ones(self.fft_size)
 
-        num_frames = 1 + (len(x) - self.fft_size) # hop_sizes
+        num_frames = 1 + (len(x) - self.fft_size) // self.hop_size # hop_sizes
         if num_frames < 1:
             num_frames = 1
 

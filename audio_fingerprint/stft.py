@@ -1,24 +1,50 @@
 import numpy as np
 from numpy.lib import stride_tricks
+import logging
+
+
+logger = logging.getLogger(__name__)
 
 class STFT:
-    def __init__(self, fft_size=1024, hop_size=512, window_type="hann") -> None:
+    """
+    A class computing Short-Time Fourier Transform (STFT) from audio input.
+    """
+     
+    def __init__(self, fft_size: int=1024, hop_size: int=512, window_type: str="hann") -> None:
+        """
+        Initialize the STFT.
+        """
+        
         self.fft_size = fft_size
         self.hop_size = hop_size
         self.window_type = window_type
         
-    def stft(self, x):
-        if self.window_type == "hann":
-            window = np.hanning(self.fft_size)
-        elif self.window_type == "hamming":
-            window = np.hamming(self.fft_size)
-        else:
-            window = np.ones(self.fft_size)
+    def stft(self, x) -> np.ndarray:
+        """
+        Compute the STFT of the signal x.
+        """
+        try:
+            logger.debug(f"Input signal length: {len(x)} | dtype: {x.dtype}")
+            
+            if self.window_type == "hann":
+                window = np.hanning(self.fft_size)
+            elif self.window_type == "hamming":
+                window = np.hamming(self.fft_size)
+            else:
+                window = np.ones(self.fft_size)
 
-        frame = stride_tricks.sliding_window_view(x, self.fft_size)[::self.hop_size]
+            logger.debug(f"Using window type: {self.window_type}")
 
-        frame_windowed = frame * window
+            frames = stride_tricks.sliding_window_view(x, self.fft_size)[::self.hop_size]
+            logger.debug(f"Frames shape: {frames.shape}")
+            
+            frame_windowed = frames * window
 
-        spectrum = np.fft.rfft(frame_windowed, n=self.fft_size, axis=1)
+            spectrum = np.fft.rfft(frame_windowed, n=self.fft_size, axis=1)
+            logger.debug(f"Spectrum shape: {spectrum.shape}")
 
-        return spectrum 
+            return spectrum
+        
+        except Exception as e:
+            logger.error(f"STFT computation failed: {e}", exc_info=True)
+            raise

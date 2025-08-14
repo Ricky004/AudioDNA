@@ -19,7 +19,7 @@ class STFT:
         self.hop_size = hop_size
         self.window_type = window_type
         
-    def stft(self, x) -> np.ndarray:
+    def compute_stft(self, x) -> np.ndarray:
         """
         Compute the STFT of the signal x.
         """

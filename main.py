@@ -3,6 +3,7 @@ from audio_fingerprint.loader import AudioLoader
 from audio_fingerprint.stft import STFT
 from audio_fingerprint.mel_filterbank import MelFilterBank
 from audio_fingerprint.peaks import PeakPicker
+from audio_fingerprint.fingerprint import Fingerprinter # Import the Fingerprinter class
 import matplotlib.pyplot as plt
 
 # -------------------------------
@@ -62,6 +63,20 @@ else:
     times = peaks[:, 0].astype(int)
     freqs = peaks[:, 1].astype(int)
     amps = peaks[:, 2]
+
+    # -------------------------------
+    # Generate fingerprints
+    # -------------------------------
+    fingerprinter = Fingerprinter()
+    fingerprints = fingerprinter.generate_fingerprints(peaks)
+    
+    if len(fingerprints) > 0:
+        print(f"\n✅ Generated {len(fingerprints)} fingerprints.")
+        print("First 5 fingerprints:")
+        for fp in fingerprints[:5]:
+            print(f"Hash: {fp[0]}, Anchor Time: {fp[1]}")
+    else:
+        print("\n⚠ No fingerprints generated.")
 
     # -------------------------------
     # Plot constellation map

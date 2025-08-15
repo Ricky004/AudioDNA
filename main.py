@@ -5,48 +5,78 @@ from audio_fingerprint.mel_filterbank import MelFilterBank
 from audio_fingerprint.peaks import PeakPicker
 import matplotlib.pyplot as plt
 
+# -------------------------------
+# Load and preprocess audio
+# -------------------------------
 loader = AudioLoader(sr=16000)
 audio, sr = loader.load("song.mp3")
 
 stft = STFT(fft_size=2048, hop_size=512)
-x = stft.compute_stft(audio)
+# Your STFT function returns shape (frames, freq_bins)
+X = stft.compute_stft(audio)
 
+# Magnitude and phase
+magnitude = np.abs(X)
+phase = np.angle(X)
 
-# Magnitude and Phase
-magnitude = np.abs(x)
-phase = np.angle(x)
-
-print(f"STFT shape: {x.shape}")
-
+print(f"STFT shape (frames, freq_bins): {magnitude.shape}") # Should show (351, 1025) or similar
 print(f"Audio shape: {audio.shape}, Sample rate: {sr}")
 
+# -------------------------------
+# Mel filter bank + log compression
+# -------------------------------
 n_fft = stft.fft_size
 n_mels = 128
 mel_fb = MelFilterBank(sr=sr, n_fft=n_fft, n_mels=n_mels)
-m = mel_fb.mel_filter_bank()
-magnitude_power = magnitude**2  # convert to power
+M = mel_fb.mel_filter_bank() # Shape: (n_mels, freq_bins) -> (128, 1025)
 
-# Apply mel filter bank
-mel_spec = np.dot(m, magnitude_power.T).T  # shape: (frames, n_mels)
+# Convert to power spectrum
+magnitude_power = magnitude ** 2 # Shape: (frames, freq_bins) -> (351, 1025)
 
-# Apply log compression
-mel_spec_log = 10 * np.log10(mel_spec + 1e-10)
+# Apply mel filter bank - FINAL FIX: Transpose the power spectrogram
+# We need M @ P where P has shape (freq_bins, frames). So we use .T
+# (128, 1025) @ (1025, 351) -> (128, 351)
+mel_spec = np.dot(M, magnitude_power.T)
 
-# Plot mel-log spectrogram
-picker = PeakPicker(threshold=0.3, neighborhood_size=(5, 5))
-peaks = picker.find_peaks(mel_spec_log)
+# The resulting mel_spec now has the correct (n_mels, frames) shape
+print(f"Mel Spectrogram shape (n_mels, frames): {mel_spec.shape}")
 
-# Plot constellation map
-times, freqs, amps = zip(*peaks)
-times = np.array(times)
-freqs = np.array(freqs)
-freqs = np.clip(freqs, 0, n_mels - 1)
-plt.figure(figsize=(10, 6))
-plt.imshow(mel_spec_log.T, origin="lower", aspect="auto", cmap="magma")
-plt.scatter(times, freqs, s=10, edgecolor="black", facecolor="cyan")
-plt.ylim(0, n_mels - 1)  # ✅ force axis to match Mel bins
-plt.title("Constellation Map")
-plt.xlabel("Frames")
-plt.ylabel("Mel band index")
-plt.show()
+# Apply log compression (log-mel spectrogram)
+mel_spec_db = 10 * np.log10(mel_spec + 1e-10)
 
+# -------------------------------
+# Peak picking
+# -------------------------------
+picker = PeakPicker(
+    neighborhood_size=(15, 7),
+    median_filter_size=(41, 21),
+    offset_db=7.0,
+    peaks_per_band=30
+)
+
+peaks = picker.find_peaks(mel_spec_db)
+
+if peaks.size == 0:
+    print("⚠ No peaks found.")
+else:
+    times = peaks[:, 0].astype(int)
+    freqs = peaks[:, 1].astype(int)
+    amps = peaks[:, 2]
+
+    # -------------------------------
+    # Plot constellation map
+    # -------------------------------
+    plt.figure(figsize=(10, 6))
+    plt.imshow(
+        mel_spec_db,
+        origin="lower",
+        aspect="auto",
+        cmap="magma"
+    )
+    plt.scatter(times, freqs, s=12, edgecolor="black", facecolor="cyan", linewidth=0.5)
+    plt.ylim(0, n_mels - 1)
+    plt.title("Constellation Map")
+    plt.xlabel("Frames")
+    plt.ylabel("Mel band index")
+    plt.colorbar(label="Amplitude (dB)")
+    plt.show()

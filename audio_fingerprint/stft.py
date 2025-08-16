@@ -4,6 +4,7 @@ import logging
 
 
 logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
 class STFT:
     """
@@ -24,7 +25,7 @@ class STFT:
         Compute the STFT of the signal x.
         """
         try:
-            logger.debug(f"Input signal length: {len(x)} | dtype: {x.dtype}")
+            logger.info(f"Input signal length: {len(x)} | dtype: {x.dtype}")
             
             if self.window_type == "hann":
                 window = np.hanning(self.fft_size)
@@ -33,15 +34,15 @@ class STFT:
             else:
                 window = np.ones(self.fft_size)
 
-            logger.debug(f"Using window type: {self.window_type}")
+            logger.info(f"Using window type: {self.window_type}")
 
             frames = stride_tricks.sliding_window_view(x, self.fft_size)[::self.hop_size]
-            logger.debug(f"Frames shape: {frames.shape}")
+            logger.info(f"Frames shape: {frames.shape}")
             
             frame_windowed = frames * window
 
             spectrum = np.fft.rfft(frame_windowed, n=self.fft_size, axis=1)
-            logger.debug(f"Spectrum shape: {spectrum.shape}")
+            logger.info(f"Spectrum shape: {spectrum.shape}")
 
             return spectrum
         

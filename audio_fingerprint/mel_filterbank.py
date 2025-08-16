@@ -5,18 +5,20 @@ logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
 class MelFilterBank:
-    def __init__(self, sr, n_fft, n_mels=128, fmin=0, fmax=None):
+    def __init__(self, sr: float, n_fft: int, n_mels: int=128, fmin: int=0, fmax=None) -> None:
         self.sr = sr
         self.n_fft = n_fft
         self.n_mels = n_mels
         self.fmin = fmin
         self.fmax = fmax
-
-    def hz_to_mel(self, hz):
+    
+    @staticmethod
+    def hz_to_mel(hz):
         """Convert frequency in Hz to Mel scale."""
         return 2595 * np.log10(1 + hz / 700.0)
     
-    def mel_to_hz(self, mel):
+    @staticmethod
+    def mel_to_hz(mel):
         """Convert Mel scale back to Hz."""
         return 700 * (10**(mel / 2595.0) - 1)
 

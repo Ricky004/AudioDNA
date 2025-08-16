@@ -20,7 +20,7 @@ class STFT:
         self.hop_size = hop_size
         self.window_type = window_type
         
-    def compute_stft(self, x) -> np.ndarray:
+    def compute_stft(self, x):
         """
         Compute the STFT of the signal x.
         """
@@ -41,10 +41,10 @@ class STFT:
             
             frame_windowed = frames * window
 
-            spectrum = np.fft.rfft(frame_windowed, n=self.fft_size, axis=1)
-            logger.info(f"Spectrum shape: {spectrum.shape}")
+            spec = np.fft.rfft(frame_windowed, n=self.fft_size, axis=1)
+            logger.info(f"Spectrum shape: {spec.shape}")
 
-            return spectrum
+            return np.abs(spec) ** 2
         
         except Exception as e:
             logger.error(f"STFT computation failed: {e}", exc_info=True)

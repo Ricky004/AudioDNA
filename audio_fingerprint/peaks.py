@@ -65,7 +65,6 @@ class PeakPicker:
 
             # 3. Apply the adaptive threshold
             # A peak must be a local maximum AND be significantly louder than its local background.
-            # This is the key change to fix the issue.
             detected_peaks = local_max & (spec_db > background + self.offset_db)
 
             # 4. Exclude edges to avoid artifacts from filtering

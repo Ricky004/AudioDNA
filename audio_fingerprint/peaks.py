@@ -6,22 +6,22 @@ logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
 class PeakPicker:
-    def __init__(self, neighborhood_size=(15, 7), median_filter_size=(41, 21), offset_db=7.0, peaks_per_band=30, bands_split=6):
+    def __init__(self, neighborhood_size=(15, 7), median_filter_size=(41, 21),
+                 offset_db=7.0, peaks_per_band=30, bands_split=6, time_window=60,
+                 max_peaks_per_second=35, sr=44100, hop_size=512):
         """
         Finds spectral peaks in a log-mel spectrogram using an adaptive threshold.
 
         Args:
-            neighborhood_size (tuple): The (freq_bins, time_frames) footprint for the
-                                     local maximum filter. A point is a peak if it's the
-                                     brightest in this neighborhood.
-            median_filter_size (tuple): The (freq_bins, time_frames) footprint for the
-                                        median filter used to estimate the local background noise.
-                                        Should be larger than neighborhood_size.
-            offset_db (float): A peak's amplitude in dB must be this much greater than the
-                               local background (median) to be considered a peak.
-            peaks_per_band (int): Max number of peaks to keep per frequency band region after detection.
-            bands_split (int): How many horizontal frequency regions to split the spectrogram into
-                               for distributing peaks.
+            neighborhood_size (tuple): Local maximum filter footprint (freq_bins, time_frames).
+            median_filter_size (tuple): Median filter footprint for background.
+            offset_db (float): Peak must exceed background + offset_db.
+            peaks_per_band (int): Max peaks per band+time window.
+            bands_split (int): Number of frequency bands.
+            time_window (int): Number of frames per time slice.
+            max_peaks_per_second (int): Global cap of peaks per second.
+            sr (int): Sample rate (for time conversion).
+            hop_size (int): Hop size between STFT frames.
         """
         if not all(s % 2 == 1 for s in neighborhood_size):
             logger.warning(f"neighborhood_size {neighborhood_size} should have odd dimensions for symmetry.")
@@ -33,21 +33,16 @@ class PeakPicker:
         self.offset_db = offset_db
         self.peaks_per_band = peaks_per_band
         self.bands_split = bands_split
+        self.time_window = time_window
+        self.max_peaks_per_second = max_peaks_per_second
+        self.sr = sr
+        self.hop_size = hop_size
 
     def find_peaks(self, mel_log_spec):
-        """
-        Finds peaks in the given log-mel spectrogram.
-
-        Args:
-            mel_log_spec (np.ndarray): The input spectrogram (freq_bins, time_frames).
-
-        Returns:
-            np.ndarray: An array of peaks, with each row being [time_idx, freq_idx, amplitude_db].
-                        Returns an empty array if no peaks are found.
-        """
         try:
             logger.info(f"Running peak picking: neighborhood={self.neighborhood_size}, "
-                        f"offset_db={self.offset_db}")
+                        f"offset_db={self.offset_db}, time_window={self.time_window}, "
+                        f"max_peaks_per_second={self.max_peaks_per_second}")
 
             if np.max(mel_log_spec) <= 0:
                 logger.warning("Spectrogram has zero or negative energy, no peaks found.")
@@ -55,19 +50,16 @@ class PeakPicker:
 
             spec_db = mel_log_spec
 
-            # 1. Find all local maxima (candidates)
-            # A point is a local maximum if it is greater than all its neighbors.
+            # 1. Local maxima
             local_max = maximum_filter(spec_db, size=self.neighborhood_size, mode='constant') == spec_db
 
-            # 2. Create an adaptive threshold using a median filter
-            # This estimates the local background energy.
+            # 2. Local background
             background = median_filter(spec_db, size=self.median_filter_size, mode='constant')
 
-            # 3. Apply the adaptive threshold
-            # A peak must be a local maximum AND be significantly louder than its local background.
+            # 3. Apply adaptive threshold
             detected_peaks = local_max & (spec_db > background + self.offset_db)
 
-            # 4. Exclude edges to avoid artifacts from filtering
+            # 4. Exclude edges
             mask = np.ones_like(spec_db, dtype=bool)
             f_half, t_half = self.neighborhood_size[0] // 2, self.neighborhood_size[1] // 2
             if f_half > 0:
@@ -87,22 +79,43 @@ class PeakPicker:
                 logger.warning("No peaks found after filtering.")
                 return np.empty((0, 3))
 
-            # 6. Distribute peaks across frequency bands to ensure good coverage
+            # 6. Distribute across frequency bands + time windows
             final_peaks = []
             total_freq_bins = mel_log_spec.shape[0]
             band_step = total_freq_bins // self.bands_split if self.bands_split > 0 else total_freq_bins
 
             for start in range(0, total_freq_bins, band_step):
                 end = min(start + band_step, total_freq_bins)
-                # Filter peaks that fall within the current frequency band
                 band_peaks = peaks[(peaks[:, 1] >= start) & (peaks[:, 1] < end)]
-                # Sort the peaks in this band by amplitude (descending)
-                sorted_band_peaks = band_peaks[np.argsort(-band_peaks[:, 2])]
-                # Keep only the top 'peaks_per_band'
-                final_peaks.extend(sorted_band_peaks[:self.peaks_per_band])
+
+                if band_peaks.shape[0] == 0:
+                    continue
+
+                max_time = int(np.max(band_peaks[:, 0])) + 1
+                for t0 in range(0, max_time, self.time_window):
+                    t1 = t0 + self.time_window
+                    time_slice = band_peaks[(band_peaks[:, 0] >= t0) & (band_peaks[:, 0] < t1)]
+                    if time_slice.shape[0] == 0:
+                        continue
+
+                    sorted_time_peaks = time_slice[np.argsort(-time_slice[:, 2])]
+                    final_peaks.extend(sorted_time_peaks[:self.peaks_per_band])
 
             final_peaks = np.array(final_peaks)
-            logger.info(f"Found {len(final_peaks)} peaks (distributed across {self.bands_split} bands)")
+
+            # 7. Apply per-second cap
+            if final_peaks.shape[0] > 0:
+                times_sec = final_peaks[:, 0] * (self.hop_size / self.sr)
+                clipped = []
+                for sec in np.unique(times_sec.astype(int)):
+                    idxs = np.where(times_sec.astype(int) == sec)[0]
+                    if len(idxs) > self.max_peaks_per_second:
+                        # keep loudest N
+                        idxs = idxs[np.argsort(-final_peaks[idxs, 2])[:self.max_peaks_per_second]]
+                    clipped.extend(final_peaks[idxs])
+                final_peaks = np.array(clipped)
+
+            logger.info(f"Found {len(final_peaks)} peaks after band+time+per-second limiting")
             return final_peaks
 
         except Exception as e:

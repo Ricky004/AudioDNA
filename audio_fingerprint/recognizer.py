@@ -5,43 +5,18 @@ from audio_fingerprint.stft import STFT
 from audio_fingerprint.mel_filterbank import MelFilterBank
 from audio_fingerprint.peaks import PeakPicker
 from audio_fingerprint.fingerprint import Fingerprinter
+from audio_fingerprint.fingerprint_extracter import FingerprintExtracter
 from audio_fingerprint.database import Database
 
 
 class Recognizer:
     def __init__(self, db: Database) -> None:
         self.db = db
-
-        self.loader = AudioLoader()
-        self.stft = STFT(fft_size=2048)
-        self.mel_fb = MelFilterBank(sr=44100, n_fft=2048)
-        self.peak_picker = PeakPicker()
-        self.fingerprinter = Fingerprinter()
+        self.fingerprint_extracter = FingerprintExtracter()
 
     def recognize(self, filepath: str):
-        # 1. Load audio from file
-        audio, sr = self.loader.load(filepath)
-
-        # 2. Apply STFT
-        spec = self.stft.compute_stft(audio)
-
-        # 3. Apply mel fileterbank 
-        m = self.mel_fb.mel_filter_bank()
+        fingerprints = self.fingerprint_extracter.extarct(filepath=filepath)
         
-        # We need M @ P where P has shape (freq_bins, frames). So we use .T
-        # (128, 1025) @ (1025, 351) -> (128, 351)
-        mel_spec = np.dot(m, spec.T)
-
-        # Apply log compression (log-mel spectrogram)
-        mel_spec_db = 10 * np.log10(mel_spec + 1e-10)
-
-        # 4. Apply peak peacker
-        peaks = self.peak_picker.find_peaks(mel_spec_db)
-
-        # 5. Apply fingerprinting
-        fingerprints = self.fingerprinter.generate_fingerprints(peaks)
-
-        # 6. Matching
         return self._match(fingerprints)
     
     def _match(self, fingerprints):
@@ -51,7 +26,7 @@ class Recognizer:
         for h, t in fingerprints:
             for song_id, entries in db_data.items():
                 for db_hash, db_offset in entries:
-                    if db_hash == h:  # ✅ hash match
+                    if db_hash == h:  
                         delta = db_offset - t
                         match_scores[song_id].append(delta)
 

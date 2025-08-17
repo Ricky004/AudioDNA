@@ -18,7 +18,7 @@ class UploadSong:
             raise ValueError(f"Failed to retrieve song_id for {song_name} - {artist}")
         
         # 3. Generate fingerprints
-        fingerprints = self.fingerprint_extracter.extarct(filepath)
+        fingerprints = self.fingerprint_extracter.extract(filepath)
         if not fingerprints:
             raise ValueError("No fingerprints generated for file: " + filepath)
         

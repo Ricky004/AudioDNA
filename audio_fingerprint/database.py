@@ -28,7 +28,7 @@ class Database:
         self._execute("""
             CREATE TABLE IF NOT EXISTS songs (
                 song_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL UNIQUE,
+                name TEXT NOT NULL,
                 artist TEXT NOT NULL
             );
         """)
@@ -58,7 +58,7 @@ class Database:
         return row[0]
 
 
-    def get_all(self):
+    def get_all_fingerprint(self):
         """Fetch all data from the fingerprints table."""
         self.cursor = self._execute("SELECT * FROM fingerprints")
         rows = self.cursor.fetchall()
@@ -70,11 +70,44 @@ class Database:
           db_data[song_id].append((h, offset))
 
         return db_data
+    
+    def get_all_songs(self):
+        """Fetch all data from the fingerprints table."""
+        self.cursor = self._execute("SELECT * FROM songs")
+        rows = self.cursor.fetchall()
+    
+        db_data = {}
+        for song_id, h, offset in rows:
+          if song_id not in db_data:
+            db_data[song_id] = []
+          db_data[song_id].append((h, offset))
 
-    def find_matches(self, query_hashes: List[str]) -> Dict[int, List[int]] | None:
-        conn = sqlite3.connect(self.db_name)
-        cursor = conn.cursor()
-        pass
+        return db_data  
+
+    def find_matches(self, query_hashes: List[int]) -> Dict[int, List[int]] | None:
+        if not query_hashes:
+            return None
+
+        placeholders = ",".join("?" for _ in query_hashes)
+        sql = f"""
+            SELECT hash, song_id, anchor_time
+            FROM fingerprints
+            WHERE hash IN ({placeholders})
+        """
+        self.cursor = self._execute(sql, query_hashes)
+        results = self.cursor.fetchall()
+
+        if not results:
+            return None
+
+        matches: Dict[int, List[int]] = {}
+        for hash_val, song_id, anchor_time in results:
+            if song_id not in matches:
+                matches[song_id] = []
+            matches[song_id].append(anchor_time)
+
+        return matches
+
 
     def clear(self):
         self._execute("DROP TABLE IF EXISTS fingerprints;")

@@ -2,3 +2,4 @@ venv/
 env/
 song.mp3
 *__pycache__
+*.db

@@ -15,22 +15,23 @@ class Recognizer:
         self.fingerprint_extracter = FingerprintExtracter()
 
     def recognize(self, filepath: str):
-        fingerprints = self.fingerprint_extracter.extarct(filepath=filepath)
+        fingerprints = self.fingerprint_extracter.extract(filepath=filepath)
         
         return self._match(fingerprints)
     
     def _match(self, fingerprints):
-        db_data = self.db.get_all()
         match_scores = defaultdict(list)
 
-        for h, t in fingerprints:
-            for song_id, entries in db_data.items():
-                for db_hash, db_offset in entries:
-                    if db_hash == h:  
-                        delta = db_offset - t
-                        match_scores[song_id].append(delta)
+        for h, query_offset in fingerprints:
+            db_matches = self.db.find_matches([h])  
+            if not db_matches:
+                continue
 
-        # Find best alignment
+            for song_id, offsets in db_matches.items():
+                for db_offset in offsets:
+                    delta = db_offset - query_offset
+                    match_scores[song_id].append(delta)
+
         best_song, best_score = None, 0
         for song_id, deltas in match_scores.items():
             if deltas:
@@ -39,4 +40,9 @@ class Recognizer:
                 if score > best_score:
                     best_song, best_score = song_id, score
 
+        # Confidence threshold
+        if best_score < 20:
+            return None, 0
+
         return best_song, best_score
+

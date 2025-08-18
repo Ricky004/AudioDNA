@@ -1,4 +1,3 @@
-import numpy as np
 from audio_fingerprint.fingerprint_extracter import FingerprintExtracter
 from audio_fingerprint.database import Database
 

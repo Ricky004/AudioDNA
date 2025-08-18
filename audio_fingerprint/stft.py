@@ -1,4 +1,3 @@
-from typing import Tuple
 import numpy as np
 from numpy.lib import stride_tricks
 import logging

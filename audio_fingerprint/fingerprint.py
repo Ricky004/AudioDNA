@@ -1,5 +1,3 @@
-# audio_fingerprint/fingerprint.py
-
 import numpy as np
 import hashlib
 from typing import List, Tuple

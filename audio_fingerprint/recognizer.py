@@ -1,4 +1,4 @@
-from collections import Counter, defaultdict
+from collections import defaultdict
 from typing import List, Tuple
 from audio_fingerprint.fingerprint_extracter import FingerprintExtracter
 from audio_fingerprint.database import Database

@@ -1,6 +1,5 @@
 import sqlite3
 from typing import List, Tuple, Dict
-from typing import Optional
 
 class Database:
     def __init__(self, db_name="music.db"):

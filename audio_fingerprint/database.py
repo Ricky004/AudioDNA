@@ -84,7 +84,7 @@ class Database:
 
         return db_data  
 
-    def find_matches(self, query_hashes: List[int]) -> Dict[int, List[int]] | None:
+    def find_matches(self, query_hashes: List[str]) -> Dict[int, Dict[str, List[int]]] | None:
         if not query_hashes:
             return None
 
@@ -100,14 +100,16 @@ class Database:
         if not results:
             return None
 
-        matches: Dict[int, List[int]] = {}
+        matches: Dict[int, Dict[str, List[int]]] = {}
+
         for hash_val, song_id, anchor_time in results:
             if song_id not in matches:
-                matches[song_id] = []
-            matches[song_id].append(anchor_time)
+                matches[song_id] = {}
+            if hash_val not in matches[song_id]:
+                matches[song_id][hash_val] = []
+            matches[song_id][hash_val].append(anchor_time)
 
         return matches
-
 
     def clear(self):
         self._execute("DROP TABLE IF EXISTS fingerprints;")

@@ -14,8 +14,17 @@ class FingerprintExtracter:
         self.mel_fb = MelFilterBank(sr=44100, n_fft=2048)
         self.peak_picker = PeakPicker()
         self.fingerprinter = Fingerprinter()
+    
+    def from_file(self, filepath: str):
+        """Load audio from file and extract fingerprint."""
+        audio, _ = self.loader.load(filepath)
+        return self._extract(audio)
 
-    def extract(self, audio) -> List[Tuple[str, int]]:
+    def from_pcm(self, pcm_array: np.ndarray):
+        """Use already captured PCM data and extract fingerprint."""
+        return self._extract(pcm_array)
+
+    def _extract(self, audio: np.ndarray) -> List[Tuple[str, int]]:
         # 2. Apply STFT
         spec = self.stft.compute_stft(audio)
 

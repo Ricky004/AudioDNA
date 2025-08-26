@@ -5,7 +5,7 @@ from audio_fingerprint.database import Database
 class UploadSong:
     def __init__(self, db: Database) -> None:
         self.db = db
-        self.fingerprint_extracter = FingerprintExtracter()
+        self.extracter = FingerprintExtracter()
 
     def upload_new_song(self, filepath: str, song_name: str, artist: str) -> int:
         # 1. Store metadata of the song
@@ -17,7 +17,7 @@ class UploadSong:
             raise ValueError(f"Failed to retrieve song_id for {song_name} - {artist}")
         
         # 3. Generate fingerprints
-        fingerprints = self.fingerprint_extracter.extract(filepath)
+        fingerprints = self.extracter.from_file(filepath)
         if not fingerprints:
             raise ValueError("No fingerprints generated for file: " + filepath)
         

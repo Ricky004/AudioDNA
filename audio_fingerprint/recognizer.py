@@ -2,15 +2,16 @@ from collections import defaultdict
 from typing import List, Tuple
 from audio_fingerprint.fingerprint_extracter import FingerprintExtracter
 from audio_fingerprint.database import Database
+import numpy as np
 
 
 class Recognizer:
     def __init__(self, db: Database) -> None:
         self.db = db
-        self.fingerprint_extracter = FingerprintExtracter()
+        self.extracter = FingerprintExtracter()
 
-    def recognize(self, audio):
-        fingerprints = self.fingerprint_extracter.extract(audio)
+    def recognize(self, audio: np.ndarray):
+        fingerprints = self.extracter.from_pcm(audio)
         
         return self._match(fingerprints)
 

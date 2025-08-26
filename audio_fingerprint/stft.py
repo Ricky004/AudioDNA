@@ -18,14 +18,14 @@ class STFT:
         self.hop_size = hop_size
         self.window_type = window_type
         
-    def compute_stft(self, x) -> np.ndarray:
+    def compute_stft(self, audio: np.ndarray) -> np.ndarray:
         """
         Compute the STFT of the signal x.
         Returns:
             np.ndarray: STFT magnitude spectrogram with shape (frames, freq_bins)
         """
         try:
-            logger.info(f"Input signal shape: {len(x)}")
+            logger.info(f"Input signal shape: {len(audio)}")
 
             # Select window
             if self.window_type == "hann":
@@ -38,7 +38,7 @@ class STFT:
             logger.info(f"Using window type: {self.window_type}")
 
             # Frame the signal
-            frames = stride_tricks.sliding_window_view(x, self.fft_size)[::self.hop_size]
+            frames = stride_tricks.sliding_window_view(audio, self.fft_size)[::self.hop_size]
             logger.info(f"Frames shape: {frames.shape}")
 
             # Apply window

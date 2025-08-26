@@ -9,8 +9,8 @@ class Recognizer:
         self.db = db
         self.fingerprint_extracter = FingerprintExtracter()
 
-    def recognize(self, filepath: str):
-        fingerprints = self.fingerprint_extracter.extract(filepath=filepath)
+    def recognize(self, audio):
+        fingerprints = self.fingerprint_extracter.extract(audio)
         
         return self._match(fingerprints)
 

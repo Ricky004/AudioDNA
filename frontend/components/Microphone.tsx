@@ -3,63 +3,86 @@ import React, { useState, useRef } from "react";
 
 export default function Microphone() {
   const [listening, setListening] = useState(false);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const workletNodeRef = useRef<AudioWorkletNode | null>(null);
 
   const toggleMic = async () => {
     if (listening) {
-      mediaRecorderRef.current?.stop();
-      setListening(false);
+      stopRecording();
     } else {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        const audioCtx = new AudioContext()
-        const source = audioCtx.createMediaStreamSource(stream)
-        await audioCtx.audioWorklet.addModule("./lib/linear-pcm-processor.js")
-        const audioWorkletNode = new AudioWorkletNode(audioCtx, "linear-pcm-processor")
-
-        source.connect(audioWorkletNode)
-        // Mic play back is off
-        // audioWorkletNode.connect(audioCtx.destination) 
-
-        let chunkBuffer: Int16Array[] = []
-
-        // Receive PCM chunks from the processor
-        audioWorkletNode.port.onmessage = async (e: MessageEvent<Int16Array>) => {
-          if (e.data && e.data.length > 0) {
-            chunkBuffer.push(e.data)
-          }
-        }
-
-        setInterval(async () => {
-          if (chunkBuffer.length > 0) {
-            const totalLength = chunkBuffer.reduce((sum, c) => sum + c.length, 0)
-            const merged = new Int16Array(totalLength)
-            let offset = 0
-            chunkBuffer.forEach((c) => {
-              merged.set(c, offset)
-              offset += c.length
-            })
-
-            // send to backend
-            const blob = new Blob([merged.buffer], {type: "application/octet-stream"});
-            await fetch("http://localhost:5000/api/v1/audiodna", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/octet-stream",
-              },
-              body: blob,
-            });
-
-            chunkBuffer = [] // clear buffer
-          }
-
-        }, 2000)
-
-        setListening(true);
-      } catch (err) {
-        console.error("Mic access denied:", err);
-      }
+      await startRecording();
     }
+  };
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const audioCtx = new AudioContext();
+      audioCtxRef.current = audioCtx;
+
+      const source = audioCtx.createMediaStreamSource(stream);
+      await audioCtx.audioWorklet.addModule("linear-pcm-processor.js");
+      const audioWorkletNode = new AudioWorkletNode(audioCtx, "linear-pcm-processor");
+      workletNodeRef.current = audioWorkletNode;
+
+      source.connect(audioWorkletNode);
+
+      const chunkBuffer: Int16Array[] = [];
+
+      audioWorkletNode.port.onmessage = (e: MessageEvent<Int16Array>) => {
+        if (e.data && e.data.length > 0) {
+          chunkBuffer.push(e.data);
+        }
+      };
+
+      setListening(true);
+      console.log("Recording started for 10s...");
+
+      // Stop after 10s
+      setTimeout(async () => {
+        audioWorkletNode.disconnect();
+        source.disconnect();
+        audioCtx.close();
+        setListening(false);
+
+        // merge
+        if (chunkBuffer.length > 0) {
+          const totalLength = chunkBuffer.reduce((sum, c) => sum + c.length, 0);
+          const merged = new Int16Array(totalLength);
+          let offset = 0;
+          chunkBuffer.forEach((c) => {
+            merged.set(c, offset);
+            offset += c.length;
+          });
+
+          // send
+          const blob = new Blob([merged.buffer], { type: "application/octet-stream" });
+          const res = await fetch("http://localhost:5000/api/v1/audiodna", {
+            method: "POST",
+            headers: { "Content-Type": "application/octet-stream" },
+            body: blob,
+          });
+
+
+          const data = await res.json();
+          console.log("🎶 Recognition result:", data);
+        }
+      }, 10000); // 10 seconds
+
+    } catch (err) {
+      console.error("Mic access denied:", err);
+    }
+  };
+
+  const stopRecording = () => {
+    if (workletNodeRef.current) {
+      workletNodeRef.current.disconnect();
+    }
+    if (audioCtxRef.current) {
+      audioCtxRef.current.close();
+    }
+    setListening(false);
+    console.log("Recording stopped manually");
   };
 
   return (
@@ -75,7 +98,7 @@ export default function Microphone() {
         <span className="text-3xl">🎤</span>
       </button>
       <p className="mt-6 text-lg">
-        {listening ? "Listening & Sending..." : "Tap to Start"}
+        {listening ? "Recording 10s..." : "Tap to Start"}
       </p>
     </div>
   );

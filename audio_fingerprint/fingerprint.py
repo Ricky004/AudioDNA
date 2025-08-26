@@ -1,6 +1,10 @@
+import logging
 import numpy as np
 import hashlib
 from typing import List, Tuple
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
 class Fingerprinter:
     """
@@ -37,6 +41,9 @@ class Fingerprinter:
         self.target_t_max = target_t_max
         self.target_f_range = target_f_range
 
+        logger.debug(f"Initialized Fingerprinter with fanout={fanout_size}, "
+                    f"t_min={target_t_min}, t_max={target_t_max}, f_range={target_f_range}")
+
     def generate_fingerprints(self, peaks: np.ndarray) -> List[Tuple[str, int]]:
         """
         Takes an array of peaks and generates a list of fingerprints.
@@ -54,16 +61,20 @@ class Fingerprinter:
                                    tuple of (hash_hex_string, anchor_time_frame).
         """
         if peaks.shape[0] < 2:
+            logger.warning("Not enough peaks to generate fingerprints.")
             return []
 
         # Sort peaks by time index for efficient processing. This is a crucial optimization.
         peaks = peaks[peaks[:, 0].argsort()]
-        
+        logger.info(f"Generating fingerprints from {len(peaks)} peaks")
+
         fingerprints = []
         
         # Iterate through each peak, treating it as an anchor
         for i in range(len(peaks)):
             anchor_time, anchor_freq, _ = peaks[i]
+            logger.debug(f"Anchor peak @time={anchor_time}, freq={anchor_freq}")
+            
             targets_found = 0
             
             # Iterate through subsequent peaks to find targets in the zone
@@ -86,12 +97,15 @@ class Fingerprinter:
                         
                         # Store the hash along with the anchor's absolute time
                         fingerprints.append((h, int(anchor_time)))
+                        logger.debug(f" ↳ Target peak @time={target_time}, freq={target_freq}, "
+                                     f"dt={dt}, df={df}, hash={h}")
                         
                         targets_found += 1
                         # Enforce the fanout limit
                         if targets_found >= self.fanout_size:
                             break
-                            
+
+        logger.info(f"Generated {len(fingerprints)} fingerprints total")                 
         return fingerprints
     
     def _create_hash(self, freq1: int, freq2: int, dt: int) -> str:

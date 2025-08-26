@@ -1,9 +1,8 @@
-import uuid
-from fastapi import FastAPI, UploadFile, File
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
-import shutil
-import os
+import numpy as np
+from fastapi import Request
 
 from audio_fingerprint.database import Database
 from audio_fingerprint.recognizer import Recognizer
@@ -19,33 +18,27 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-UPLOAD_DIR = "uploads"
-os.makedirs(UPLOAD_DIR, exist_ok=True)
-
 @app.post("/api/v1/audiodna")
-async def audiodna_endpoint(file: UploadFile = File(...)):
-    unique_name = f"{uuid.uuid4()}.webm"
-    filepath = os.path.join(UPLOAD_DIR, unique_name)
+async def audiodna_endpoint(request: Request):
+    try: 
+        body = await request.body()
 
-    # Save uploaded chunk to disk
-    with open(filepath, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+        pcm_data = np.frombuffer(body, dtype=np.int16)
+        
+        audio = pcm_data.astype(np.float32) / 32768.0
 
-    db = Database("fingerprints.db")
-    recognizer = Recognizer(db)
-    song_id, score = recognizer.recognize(filepath)
-
-    try:
-        song_id, score = recognizer.recognize(filepath)
-        result = {
-            "status": "ok",
-            "song_id": song_id,
-            "confidence": score,
-        }
+        db = Database()
+        recognizer = Recognizer(db)
+        
+        song_id, score = recognizer.recognize(audio)
+        return {
+                "status": "ok",
+                "song_id": song_id,
+                "confidence": score,
+            }
+    
     except Exception as e:
-        result = {"status": "error", "message": str(e)}
-
-    return result
+        return {"status": "error", "message": str(e)}
 
 if __name__ == "__main__":
     uvicorn.run("server:app", host="0.0.0.0", port=5000, reload=True)

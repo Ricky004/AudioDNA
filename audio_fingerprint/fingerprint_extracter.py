@@ -15,10 +15,7 @@ class FingerprintExtracter:
         self.peak_picker = PeakPicker()
         self.fingerprinter = Fingerprinter()
 
-    def extract(self, filepath: str) -> List[Tuple[str, int]]:
-        # 1. Load audio from file
-        audio, sr = self.loader.load(filepath)
-
+    def extract(self, audio) -> List[Tuple[str, int]]:
         # 2. Apply STFT
         spec = self.stft.compute_stft(audio)
 

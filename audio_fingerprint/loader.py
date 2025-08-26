@@ -1,4 +1,4 @@
-import librosa
+import audiofile as af
 import numpy as np
 import logging
 from pathlib import Path
@@ -19,7 +19,7 @@ class AudioLoader:
       self.sr = sr
       self.mono = mono
 
-    def load(self, filepath: str | Path, duration: Optional[float] = None) -> Tuple[np.ndarray, float]:
+    def load(self, filepath: str | Path) -> Tuple[np.ndarray, float]:
         """
         Load an audio file and preprocess it.
         """
@@ -31,11 +31,10 @@ class AudioLoader:
        
         try:
           logger.info(f"Loading audio file: {filepath}")
-          audio, sr = librosa.load(
+          audio, sr = af.read(
             str(filepath),
             sr=self.sr,
-            mono=self.mono,
-            duration=duration
+            mono=self.mono
             )
         
           if audio.size == 0:

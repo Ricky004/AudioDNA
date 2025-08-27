@@ -7,14 +7,14 @@ class UploadSong:
         self.db = db
         self.extracter = FingerprintExtracter()
 
-    def upload_new_song(self, filepath: str, song_name: str, artist: list) -> int:
+    def upload_new_song(self, filepath: str, song_name: str, artists: list) -> int:
         # 1. Store metadata of the song
-        self.db.add_song(song_name, artist)
+        self.db.add_song(song_name, artists)
 
         # 2. Fetch the song id
-        song_id = self.db.get_song_id(song_name, artist)
+        song_id = self.db.get_song_id(song_name, artists)
         if not song_id:
-            raise ValueError(f"Failed to retrieve song_id for {song_name} - {artist}")
+            raise ValueError(f"Failed to retrieve song_id for {song_name} - {artists}")
         
         # 3. Generate fingerprints
         fingerprints = self.extracter.from_file(filepath)

@@ -7,7 +7,7 @@ class UploadSong:
         self.db = db
         self.extracter = FingerprintExtracter()
 
-    def upload_new_song(self, filepath: str, song_name: str, artist: str) -> int:
+    def upload_new_song(self, filepath: str, song_name: str, artist: list) -> int:
         # 1. Store metadata of the song
         self.db.add_song(song_name, artist)
 

@@ -1,3 +1,4 @@
+import json
 import sqlite3
 from typing import List, Tuple, Dict
 
@@ -28,7 +29,7 @@ class Database:
             CREATE TABLE IF NOT EXISTS songs (
                 song_id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL,
-                artist TEXT NOT NULL
+                artists TEXT NOT NULL
             );
         """)
         self._execute("""
@@ -41,17 +42,17 @@ class Database:
         """)
         self._execute("CREATE INDEX IF NOT EXISTS idx_hash ON fingerprints (hash);")
 
-    def add_song(self, song_name: str, artist: str):
-        self.cursor = self._execute("INSERT INTO songs (name, artist) VALUES (?, ?)", (song_name, artist))
+    def add_song(self, song_name: str, artists: list):
+        self.cursor = self._execute("INSERT INTO songs (name, artists) VALUES (?, ?)", (song_name, json.dumps(artists)))
     
     def add_fingerprints(self, fingerprints: List[Tuple[str, int]], song_id: int):
         data = [(h, song_id, t) for h, t in fingerprints]
         self._executemany("INSERT INTO fingerprints (hash, song_id, anchor_time) VALUES (?, ?, ?)", data)
 
-    def get_song_id(self, name: str, artist: str) -> int:
+    def get_song_id(self, name: str, artists: list) -> int:
         self.cursor = self._execute(
-           "SELECT song_id FROM songs WHERE name = ? AND artist = ?",
-           (name, artist),
+           "SELECT song_id FROM songs WHERE name = ? AND artists = ?",
+           (name, artists),
         )
         row = self.cursor.fetchone()
         return row[0]

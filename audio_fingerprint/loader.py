@@ -2,7 +2,7 @@ import audiofile as af
 import numpy as np
 import logging
 from pathlib import Path
-from typing import Tuple, Optional
+from typing import Tuple
 
 
 logger = logging.getLogger(__name__)

@@ -6,6 +6,7 @@ from fastapi import Request
 
 from audio_fingerprint.database import Database
 from audio_fingerprint.recognizer import Recognizer
+from server.api.v1.routes import router
 
 app = FastAPI()
 
@@ -39,6 +40,8 @@ async def audiodna_endpoint(request: Request):
     
     except Exception as e:
         return {"status": "error", "message": str(e)}
+
+app.include_router(router, prefix="/api/v1", tags=["Spotify"])
 
 if __name__ == "__main__":
     uvicorn.run("server:app", host="0.0.0.0", port=5000, reload=True)

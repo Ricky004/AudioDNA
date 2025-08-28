@@ -1,9 +1,9 @@
-import Microphone from "@/components/Microphone";
+import MainComponent from "@/components/MainComponent";
 
 export default function Home() {
   return (
     <div className="">
-      <Microphone />
+      <MainComponent />
     </div>
   );
 }

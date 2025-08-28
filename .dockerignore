@@ -1,0 +1,23 @@
+# Git
+.git
+.gitignore
+
+# Node.js
+frontend/
+node_modules/
+
+# Python
+env/
+.venv/
+*.pyc
+__pycache__/
+.cache/
+audiodna.egg-info/
+
+# Documentation
+*.md
+
+# Other
+downloads/
+scripts/
+tests/

@@ -25,6 +25,3 @@ class UploadSong:
         self.db.add_fingerprints(fingerprints, song_id)
 
         return song_id
-
-        
-           

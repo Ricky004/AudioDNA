@@ -52,10 +52,13 @@ class Database:
     def get_song_id(self, name: str, artists: list) -> int:
         self.cursor = self._execute(
            "SELECT song_id FROM songs WHERE name = ? AND artists = ?",
-           (name, artists),
+           (name, json.dumps(artists)),
         )
         row = self.cursor.fetchone()
-        return row[0]
+        if row:
+           return row[0]
+        else:
+           raise ValueError(f"Song not found: {name} by {artists}")
 
 
     def get_all_fingerprint(self):

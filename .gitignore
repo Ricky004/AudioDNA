@@ -1,7 +1,48 @@
-venv/
-env/
-*.env
-song.mp3
-*__pycache__
+# Python virtual environment
+/env/
+/venv/
+
+# Python bytecode and cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Python distribution and packaging
+/build/
+/dist/
+/.eggs/
+/*.egg-info/
+/*.egg
+
+# Databases
 *.db
-audiodna.egg-info
+*.sqlite3
+
+# Environment variables
+*.env
+
+# Project-specific ignores
+song.mp3
+/downloads/
+/.cache/
+
+# Frontend (Node.js / Next.js)
+/frontend/node_modules/
+/frontend/.next/
+/frontend/out/
+
+# Log files
+npm-debug.log*
+yarn-error.log
+
+# OS-generated files
+.DS_Store
+Thumbs.db
+
+# IDE settings
+.vscode/
+.idea/
+
+# Cache 
+.cache

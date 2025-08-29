@@ -47,13 +47,13 @@ def add_song_to_db(link: str):
 
         query = f"{song_name} {artists_str}"
 
-        filename = f"{sanitize_filename(artists_str)} - {sanitize_filename(song_name)}.webm"
+        filename = f"{sanitize_filename(artists_str)} - {sanitize_filename(song_name)}"
         filepath = os.path.join("downloads", filename)
 
-        download_song_from_yt(query, output_path=filepath)
+        final_filepath = download_song_from_yt(query, output_path=filepath)
 
         upload = UploadSong(db)
-        upload.upload_new_song(filepath, song_name, artists)
+        upload.upload_new_song(final_filepath, song_name, artists)
 
         return {"status": "ok", "song": song_name, "artists": artists}
 
@@ -65,13 +65,22 @@ def sanitize_filename(name: str):
     # Remove invalid characters for Windows/Linux/macOS
     return re.sub(r'[\\/*?:"<>|]', "", name)
 
-def download_song_from_yt(query: str, output_path="downloads/%(title)s.%(ext)s"):
+def download_song_from_yt(query: str, output_path="downloads/%(title)s.%(ext)s") -> str:
     ydl_opts = {
         'format': 'bestaudio/best',
         'outtmpl': output_path,
-        ''
+        'postprocessors': [
+            {
+                'key': 'FFmpegExtractAudio',  
+                'preferredcodec': 'mp3',     
+                'preferredquality': '192',    
+            }
+        ],
         'noplaylist': True,
     }
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         # ytsearch1: limits to first search result
         ydl.download([f"ytsearch1:{query}"])
+
+    final_path = output_path + ".mp3"
+    return final_path

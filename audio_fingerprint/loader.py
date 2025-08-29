@@ -15,11 +15,16 @@ class AudioLoader:
     def __init__(self, sr: float = 44100, mono: bool = True) -> None:
       """
       Initialize the AudioLoader.
+
+      Args:
+          sr (int): Target sample rate.
+          mono (bool): Convert to mono if True.
+      
       """
       self.sr = sr
       self.mono = mono
 
-    def load(self, filepath: str | Path) -> Tuple[np.ndarray, float]:
+    def load(self, filepath: str | Path) -> Tuple[np.ndarray, int]:
         """
         Load an audio file and preprocess it.
         """
@@ -31,15 +36,15 @@ class AudioLoader:
        
         try:
           logger.info(f"Loading audio file: {filepath}")
-          audio, sr = af.read(
-            str(filepath),
-            sr=self.sr,
-            mono=self.mono
-            )
+          audio, sr = af.read(str(filepath))
         
           if audio.size == 0:
               logger.error("Loaded audio is empty")
               raise ValueError("Audio file containes no data")
+          
+          # Convert stereo to mono if required
+          if self.mono and audio.ndim > 1:
+                audio = np.mean(audio, axis=0)
           
           logger.info(f"Audio loaded successfully: {audio.shape[0]} samples at {sr} Hz")
           return audio, sr

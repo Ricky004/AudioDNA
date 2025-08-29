@@ -101,9 +101,13 @@ def sanitize_filename(name: str):
     return re.sub(r'[\\/*?:"<>|]', "", name)
 
 def download_song_from_yt(query: str, output_path="downloads/%(title)s.%(ext)s") -> str:
+    cookies_path = "cookies.txt"
+    with open(cookies_path, "w", encoding="utf-8") as f:
+        f.write(os.environ.get("YOUTUBE_COOKIES", ""))
     ydl_opts = {
         'format': 'bestaudio/best',
         'outtmpl': output_path,
+        'cookiefile': cookies_path,
         'postprocessors': [
             {
                 'key': 'FFmpegExtractAudio',  

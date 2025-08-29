@@ -7,7 +7,7 @@ export default function SongUploader() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    await fetch("http://127.0.0.1:5000/api/v1/get-song-info", {
+    await fetch("https://audiodna.onrender.com/api/v1/get-song-info", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

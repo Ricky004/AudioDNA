@@ -49,6 +49,17 @@ class Database:
         data = [(h, song_id, t) for h, t in fingerprints]
         self._executemany("INSERT INTO fingerprints (hash, song_id, anchor_time) VALUES (?, ?, ?)", data)
 
+    def get_song_by_id(self, song_id: int) ->  Dict[str, list]:
+        self.cursor = self._execute(
+           "SELECT name, artists FROM songs WHERE song_id = ?",
+           (song_id,),
+        )
+        row = self.cursor.fetchone()
+        if row:
+           return {"name": row[0], "artists": row[1]}
+        else:
+           raise ValueError(f"Song not found by this id: {song_id}")
+
     def get_song_id(self, name: str, artists: list) -> int:
         self.cursor = self._execute(
            "SELECT song_id FROM songs WHERE name = ? AND artists = ?",
@@ -59,8 +70,7 @@ class Database:
            return row[0]
         else:
            raise ValueError(f"Song not found: {name} by {artists}")
-
-
+        
     def get_all_fingerprint(self):
         """Fetch all data from the fingerprints table."""
         self.cursor = self._execute("SELECT * FROM fingerprints")

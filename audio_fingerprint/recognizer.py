@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 from audio_fingerprint.fingerprint_extracter import FingerprintExtracter
 from audio_fingerprint.database import Database
 import numpy as np
@@ -15,12 +15,11 @@ class Recognizer:
         
         return self._match(fingerprints)
 
-    def _match(self, fingerprints: List[Tuple[str, int]], tolerance_ms: int = 100):
+    def _match(self, fingerprints: List[Tuple[str, int]], tolerance_ms: int = 100) -> Tuple[Optional[int], int]:
         match_scores = defaultdict(int)
-
-        # group query fingerprints by hash
         query_by_hash = defaultdict(list)
-        for h, t in fingerprints:   
+
+        for h, t in fingerprints:
             query_by_hash[h].append(t)
 
         for h, query_times in query_by_hash.items():
@@ -33,15 +32,12 @@ class Recognizer:
                     continue
                 db_times = song_hashes[h]
 
-                # compare gaps in query vs db
                 for i in range(len(query_times)):
                     for j in range(i + 1, len(query_times)):
                         q_gap = abs(query_times[j] - query_times[i])
-
                         for m in range(len(db_times)):
                             for n in range(m + 1, len(db_times)):
                                 db_gap = abs(db_times[n] - db_times[m])
-
                                 if abs(q_gap - db_gap) <= tolerance_ms:
                                     match_scores[song_id] += 1
 
@@ -51,7 +47,12 @@ class Recognizer:
             if score > best_score:
                 best_song, best_score = song_id, score
 
+        # if no song found, return None
+        if best_song is None:
+            return None, 0  
+
         return best_song, best_score
+
 
 
 

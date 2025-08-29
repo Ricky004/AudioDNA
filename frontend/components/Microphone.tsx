@@ -1,8 +1,9 @@
-"use client"
+"use client";
 import React, { useState, useRef } from "react";
 
 export default function Microphone() {
   const [listening, setListening] = useState(false);
+  const [youtubeUrl, setYoutubeUrl] = useState<string | null>(null); 
   const audioCtxRef = useRef<AudioContext | null>(null);
   const workletNodeRef = useRef<AudioWorkletNode | null>(null);
 
@@ -59,13 +60,15 @@ export default function Microphone() {
           const blob = new Blob([merged.buffer], { type: "application/octet-stream" });
           const res = await fetch("http://localhost:5000/api/v1/audiodna", {
             method: "POST",
-            headers: { "Content-Type": "application/octet-stream" },
-            body: blob,
+            body: blob, 
           });
-
 
           const data = await res.json();
           console.log("🎶 Recognition result:", data);
+
+          if (data.status === "ok" && data.youtube_url) {
+            setYoutubeUrl(data.youtube_url);
+          }
         }
       }, 10000); // 10 seconds
 
@@ -97,9 +100,22 @@ export default function Microphone() {
       >
         <span className="text-3xl">🎤</span>
       </button>
+
       <p className="mt-6 text-lg">
         {listening ? "Recording 10s..." : "Tap to Start"}
       </p>
+
+      {youtubeUrl && (
+        <div className="mt-6">
+          <iframe
+            src={youtubeUrl.replace("watch?v=", "embed/")} 
+            width="400"
+            height="300"
+            allow="autoplay; encrypted-media"
+            allowFullScreen
+          ></iframe>
+        </div>
+      )}
     </div>
   );
 }

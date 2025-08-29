@@ -1,12 +1,14 @@
 import os
 import re
+import numpy as np
 import spotipy
 import yt_dlp
-from fastapi import HTTPException
+from fastapi import HTTPException, Request
 from spotipy.oauth2 import SpotifyClientCredentials 
 from pydantic import BaseModel
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from audio_fingerprint.database import Database
+from audio_fingerprint.recognizer import Recognizer
 from audio_fingerprint.song_uploader import UploadSong
 
 
@@ -31,6 +33,39 @@ sp = spotipy.Spotify(
         client_secret=settings.client_secret,
     )
 )
+
+async def audiodna_endpoint(request: Request):
+    try: 
+        body = await request.body()
+
+        pcm_data = np.frombuffer(body, dtype=np.int16)
+        
+        audio = pcm_data.astype(np.float32) / 32768.0
+
+        db = Database()
+        recognizer = Recognizer(db)
+        
+        song_id, score = recognizer.recognize(audio)
+
+        if song_id is None:
+            return {"status": "error", "message": "Song could not be recognized."}
+
+        song = db.get_song_by_id(song_id)  # You must implement this
+        song_name = song["name"]
+        artists = song["artists"]
+
+        youtube_url = get_youtube_url(f"{song_name} {artists}")
+
+        return {
+                "status": "ok",
+                "song_id": song_id,
+                "confidence": score,
+                "youtube_url": youtube_url
+            }
+    
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+    
 
 def add_song_to_db(link: str):
     try:
@@ -84,3 +119,19 @@ def download_song_from_yt(query: str, output_path="downloads/%(title)s.%(ext)s")
 
     final_path = output_path + ".mp3"
     return final_path
+
+def get_youtube_url(query: str) -> str | None:
+    """
+    Search YouTube for a song using yt_dlp and return the first video URL.
+    """
+    ydl_opts = {
+        "quiet": True,
+        "skip_download": True,
+        "extract_flat": "in_playlist",  # Only extract metadata
+    }
+
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        result = ydl.extract_info(f"ytsearch1:{query}", download=False)
+        if result and isinstance(result, dict) and "entries" in result and len(result["entries"]) > 0:
+            return f"https://www.youtube.com/watch?v={result['entries'][0]['id']}"
+    return None

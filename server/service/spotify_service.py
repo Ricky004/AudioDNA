@@ -112,6 +112,11 @@ def download_song_from_yt(query: str, output_path="downloads/%(title)s.%(ext)s")
             }
         ],
         'noplaylist': True,
+        'extractor_args': {
+        'youtube': {
+            'player_client': ['web', 'android'] 
+        }
+      }
     }
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         # ytsearch1: limits to first search result

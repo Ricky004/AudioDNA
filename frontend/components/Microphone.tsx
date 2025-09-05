@@ -58,7 +58,7 @@ export default function Microphone() {
 
           // send
           const blob = new Blob([merged.buffer], { type: "application/octet-stream" });
-          const res = await fetch("https://audiodna.onrender.com/api/v1/audiodna", {
+          const res = await fetch("http://localhost:5000/api/v1/audiodna", {
             method: "POST",
             body: blob, 
           });

@@ -90,6 +90,10 @@ def add_song_to_db(link: str):
         upload = UploadSong(db)
         upload.upload_new_song(final_filepath, song_name, artists)
 
+        if os.path.exists(final_filepath): 
+            os.remove(final_filepath)
+
+
         return {"status": "ok", "song": song_name, "artists": artists}
 
     except Exception as e:
@@ -112,12 +116,8 @@ def download_song_from_yt(query: str, output_path="downloads/%(title)s.%(ext)s")
             }
         ],
         'noplaylist': True,
-        'extractor_args': {
-        'youtube': {
-            'player_client': ['web', 'android'] 
-        }
-      }
     }
+    
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         # ytsearch1: limits to first search result
         ydl.download([f"ytsearch1:{query}"])

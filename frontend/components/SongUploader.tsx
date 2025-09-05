@@ -1,38 +1,57 @@
 "use client"
-import { useState } from "react";
+
+import { useState } from "react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { toast } from "sonner"
 
 export default function SongUploader() {
-  const [url, setUrl] = useState("");
+  const [url, setUrl] = useState("")
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+    e.preventDefault()
 
-    await fetch("https://audiodna.onrender.com/api/v1/get-song-info", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ url }),
-    });
-  };
+    try {
+      const res = await fetch("http://localhost:5000/api/v1/get-song-info", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ url }),
+      })
+
+      const data = await res.json()
+
+      if (data.status === "ok") {
+        toast.success("✅ Song Uploaded", {
+          description: `${data.song} by ${data.artists.join(", ")}`,
+          className: "text-black dark:text-white",
+        })
+      } else {
+        toast.error("❌ Upload Failed", {
+          description: data.message || "Something went wrong.",
+          className: "text-black dark:text-white",
+        })
+      }
+    } catch (err) {
+      toast.error("❌ Upload Failed", {
+        description: String(err),
+        className: "text-black dark:text-white",
+      })
+    }
+  }
 
   return (
     <div className="p-4 flex flex-col items-center justify-center">
-      <form onSubmit={handleSubmit} className="space-x-2">
-        <input
+      <form onSubmit={handleSubmit} className="flex space-x-2">
+        <Input
           type="text"
           placeholder="Paste Spotify link here"
           value={url}
           onChange={(e) => setUrl(e.target.value)}
-          className="border p-2 rounded"
         />
-        <button
-          type="submit"
-          className="bg-blue-500 text-white px-4 py-2 rounded"
-        >
-          Upload
-        </button>
+        <Button type="submit" className="bg-green-700">Upload</Button>
       </form>
     </div>
-  );
+  )
 }
